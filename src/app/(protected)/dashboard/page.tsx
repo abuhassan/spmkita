@@ -33,6 +33,12 @@ export default function DashboardPage() {
       return
     }
 
+    // Redirect parents to parent dashboard
+    if (profileData.role === 'parent') {
+      router.replace('/parent')
+      return
+    }
+
     setProfile(profileData)
 
     // Update streak

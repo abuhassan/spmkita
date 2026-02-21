@@ -13,6 +13,8 @@ export interface Profile {
   last_active_date: string | null
   onboarding_completed: boolean
   premium: boolean
+  role: 'student' | 'parent'
+  invite_code: string | null
   created_at: string
   updated_at: string
 }
@@ -135,6 +137,43 @@ export type ContentBlock =
   | { type: 'summary'; points: string[] }
   | { type: 'practice_intro'; text: string }
   | { type: 'quiz_intro'; text: string }
+
+// ─── Phase B: Parent Portal ──────────────────────────────────────────────────
+
+export interface ParentProfile {
+  id: string
+  user_id: string
+  phone: string | null
+  notification_preferences: Record<string, boolean>
+  created_at: string
+}
+
+export interface ParentChild {
+  id: string
+  parent_id: string
+  child_id: string
+  invite_code: string
+  status: 'pending' | 'active' | 'revoked'
+  created_at: string
+}
+
+export interface WeeklyReport {
+  id: string
+  student_id: string
+  week_start: string
+  report_data: Record<string, unknown>
+  created_at: string
+}
+
+export interface LearningGoal {
+  id: string
+  student_id: string
+  parent_id: string
+  goal_type: string
+  target_value: number
+  current_value: number
+  created_at: string
+}
 
 // Malaysian states
 export const MALAYSIAN_STATES = [

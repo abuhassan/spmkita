@@ -5,10 +5,17 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-client'
 
-const navItems = [
+const studentNav = [
   { href: '/dashboard', label_bm: 'Utama', label_en: 'Home', icon: '🏠' },
+  { href: '/challenge', label_bm: 'Cabaran', label_en: 'Challenge', icon: '⚡' },
   { href: '/learn', label_bm: 'Belajar', label_en: 'Learn', icon: '📖' },
   { href: '/leaderboard', label_bm: 'Ranking', label_en: 'Ranking', icon: '🏆' },
+  { href: '/profile', label_bm: 'Profil', label_en: 'Profile', icon: '👤' },
+]
+
+const parentNav = [
+  { href: '/parent', label_bm: 'Utama', label_en: 'Home', icon: '🏠' },
+  { href: '/parent/add-child', label_bm: 'Tambah', label_en: 'Add Child', icon: '➕' },
   { href: '/profile', label_bm: 'Profil', label_en: 'Profile', icon: '👤' },
 ]
 
@@ -22,23 +29,34 @@ export default function ProtectedLayout({
   const supabase = createClient()
 
   const [lang, setLang] = useState<'bm' | 'en' | null>(null)
+  const [role, setRole] = useState<'student' | 'parent' | null>(null)
   const [toggling, setToggling] = useState(false)
 
-  // Load current language from profile
+  // Load current language and role from profile
   useEffect(() => {
-    async function loadLang() {
+    async function loadProfile() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       const { data } = await supabase
         .from('profiles')
-        .select('preferred_language')
+        .select('preferred_language, role')
         .eq('id', user.id)
         .single()
-      if (data) setLang(data.preferred_language as 'bm' | 'en')
+      if (data) {
+        setLang(data.preferred_language as 'bm' | 'en')
+        setRole((data.role as 'student' | 'parent') || 'student')
+      }
     }
-    loadLang()
+    loadProfile()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Redirect parents from student-only routes to /parent
+  useEffect(() => {
+    if (role === 'parent' && pathname === '/dashboard') {
+      router.replace('/parent')
+    }
+  }, [role, pathname, router])
 
   async function toggleLang() {
     if (toggling || !lang) return
@@ -58,6 +76,8 @@ export default function ProtectedLayout({
     setToggling(false)
     window.location.reload()
   }
+
+  const navItems = role === 'parent' ? parentNav : studentNav
 
   return (
     <div className="min-h-screen bg-[#F8F9FE] pb-20">

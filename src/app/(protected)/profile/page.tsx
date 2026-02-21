@@ -32,6 +32,7 @@ export default function ProfilePage() {
   })
   const [nationalRank, setNationalRank] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
+  const [copied, setCopied] = useState(false)
 
   const userId = useRef<string>('')
 
@@ -217,6 +218,57 @@ export default function ProfilePage() {
           </button>
         </div>
       </div>
+
+      {/* ── Parent Invite Code ──────────────────────────────────────────── */}
+      {profile?.invite_code && profile?.role === 'student' && (
+        <div className="bg-white rounded-2xl p-4 shadow-sm mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-lg">👨‍👩‍👧</span>
+            <h2 className="text-sm font-bold text-[#2D3436]">
+              {lang === 'bm' ? 'Kod Jemputan Ibu Bapa' : 'Parent Invite Code'}
+            </h2>
+          </div>
+          <p className="text-xs text-[#636E72] mb-3">
+            {lang === 'bm'
+              ? 'Kongsi kod ini dengan ibu bapa agar mereka boleh pantau kemajuan anda'
+              : 'Share this code with your parents so they can track your progress'}
+          </p>
+
+          {/* Code display */}
+          <div className="bg-[#F8F9FE] rounded-xl px-4 py-3 text-center mb-3">
+            <span className="text-2xl font-mono font-bold tracking-widest text-[#6C5CE7]">
+              {profile.invite_code}
+            </span>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(profile.invite_code!)
+                setCopied(true)
+                setTimeout(() => setCopied(false), 2000)
+              }}
+              className="flex-1 flex items-center justify-center gap-1.5 bg-[#6C5CE7]/10 text-[#6C5CE7] font-semibold text-sm py-2.5 rounded-xl active:scale-[0.97] transition-all"
+            >
+              {copied ? '✓' : '📋'} {copied
+                ? (lang === 'bm' ? 'Disalin!' : 'Copied!')
+                : (lang === 'bm' ? 'Salin' : 'Copy')}
+            </button>
+            <button
+              onClick={() => {
+                const text = lang === 'bm'
+                  ? `Saya guna SPMKita untuk belajar SPM! 📚 Gunakan kod jemputan saya untuk pantau kemajuan saya: ${profile.invite_code}\n\nMuat turun di: https://spmkita.vercel.app`
+                  : `I'm using SPMKita to study for SPM! 📚 Use my invite code to track my progress: ${profile.invite_code}\n\nDownload at: https://spmkita.vercel.app`
+                window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
+              }}
+              className="flex-1 flex items-center justify-center gap-1.5 bg-[#25D366]/10 text-[#25D366] font-semibold text-sm py-2.5 rounded-xl active:scale-[0.97] transition-all"
+            >
+              💬 WhatsApp
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Stats grid ──────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 mb-6">
