@@ -88,11 +88,10 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-[#2D3436]">
-            Hai, {profile?.display_name}! 👋
+            {(profile?.preferred_language === 'en' ? 'Hi' : 'Hai')}, {profile?.display_name}! 👋
           </h1>
           <p className="text-sm text-[#636E72]">
-            {profile?.form_level ? FORM_LABELS[profile.form_level as keyof typeof FORM_LABELS] : ''} 
-            {profile?.school_name ? ` • ${profile.school_name}` : ''}
+            {profile?.preferred_language === 'en' ? `Form ${profile?.form_level}` : `Tingkatan ${profile?.form_level}`} • {profile?.school_name}
           </p>
         </div>
         <button
@@ -131,7 +130,7 @@ export default function DashboardPage() {
           <p className="text-2xl font-bold text-[#2D3436] mt-1">
             {profile?.longest_streak || 0}
           </p>
-          <p className="text-xs text-[#636E72]">Terbaik</p>
+          {profile?.preferred_language === 'en' ? 'Best' : 'Terbaik'}
         </div>
       </div>
 
@@ -139,9 +138,9 @@ export default function DashboardPage() {
       <div className="bg-gradient-to-r from-[#6C5CE7] to-[#A29BFE] rounded-2xl p-5 mb-6 shadow-lg">
         <div className="flex items-center justify-between text-white">
           <div>
-            <p className="text-sm font-medium text-white/80">Cabaran Hari Ini</p>
+            {profile?.preferred_language === 'en' ? "Today's Challenge" : 'Cabaran Hari Ini'}
             <h2 className="text-xl font-bold mt-1">
-              5 Soalan ⚡
+              {profile?.preferred_language === 'en' ? '5 Questions' : '5 Soalan'} ⚡
             </h2>
             <p className="text-sm text-white/70 mt-1">
               +50 XP • {lang === 'bm' ? 'Bonus sempurna +100 XP' : 'Perfect bonus +100 XP'}
@@ -208,7 +207,7 @@ export default function DashboardPage() {
           className="bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-all text-center"
         >
           <span className="text-2xl">🏆</span>
-          <p className="text-sm font-medium text-[#2D3436] mt-1">Leaderboard</p>
+          Leaderboard  →  {profile?.preferred_language === 'en' ? 'Leaderboard' : 'Kedudukan'}
         </button>
         <button
           onClick={() => router.push('/profile')}
