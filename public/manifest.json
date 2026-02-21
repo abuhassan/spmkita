@@ -1,0 +1,16 @@
+{
+  "name": "SPMKita",
+  "short_name": "SPMKita",
+  "description": "Platform persediaan SPM untuk pelajar Malaysia",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#7C3AED",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
