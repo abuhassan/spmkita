@@ -154,11 +154,10 @@ export default function OnboardingPage() {
 
     // Create parent-child link
     await supabase.from('parent_children').insert({
-      parent_id: user.id,
-      child_id: child.id,
-      invite_code: code,
-      status: 'active',
-    })
+  parent_id: user.id,
+  child_id: child.id,
+  status: 'active',
+})
 
     setChildName(child.display_name || '')
     setChildSchool(child.school_name || '')
