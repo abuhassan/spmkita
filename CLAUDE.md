@@ -1,21 +1,21 @@
 # SPMKita — Claude Code Project Guide
 
 ## What is this?
-SPMKita is a gamified, AI-powered SPM (Sijil Pelajaran Malaysia) preparation platform targeting 2M+ Malaysian secondary school students (Form 1-5). Think "Duolingo for SPM". Built by Abu.
+SPMKita is a gamified, AI-powered SPM preparation platform that replaces traditional tuition for Malaysian secondary school students (Form 1-5). Think "Duolingo meets tuition" — structured weekly lessons, practice, quizzes, plus a parent portal. Built by Abu.
 
 ## Tech Stack
 - **Framework**: Next.js 15 (App Router, src/ directory)
 - **Language**: TypeScript
-- **Styling**: Tailwind CSS v4 (CSS-based — uses `@import "tailwindcss"` in globals.css, NO tailwind.config.ts)
+- **Styling**: Tailwind CSS v4 (CSS-based — uses @import "tailwindcss" in globals.css, NO tailwind.config.ts)
 - **Database**: Supabase (cloud, free tier, Singapore region)
 - **Auth**: Supabase Auth (Google OAuth + Email magic link)
 - **Packages**: @supabase/supabase-js v2.97, @supabase/ssr v0.6.1
-- **Deployment**: Vercel (later)
+- **Deployment**: Vercel at https://spmkita.vercel.app
 
 ## Critical: Tailwind v4
 This project uses Tailwind v4 which is CSS-based. There is NO tailwind.config.ts file.
-- `src/app/globals.css` must start with `@import "tailwindcss";`
-- Do NOT use `@tailwind base/components/utilities` directives
+- globals.css must start with @import "tailwindcss";
+- Do NOT use @tailwind base/components/utilities directives
 - Do NOT create tailwind.config.ts
 
 ## Project Structure
@@ -25,112 +25,92 @@ src/
 │   ├── layout.tsx              # Root layout
 │   ├── page.tsx                # Landing page (public)
 │   ├── globals.css             # Tailwind v4 + custom styles
-│   ├── login/page.tsx          # Auth page (Google + magic link)
+│   ├── login/page.tsx          # Auth page
 │   ├── auth/callback/route.ts  # OAuth callback handler
-│   ├── onboarding/page.tsx     # 3-step wizard (profile → subjects → ready)
+│   ├── onboarding/page.tsx     # 3-step wizard
 │   └── (protected)/            # Auth-required routes
 │       ├── layout.tsx          # Bottom navigation bar
-│       ├── dashboard/page.tsx  # Main hub (stats, streak, daily challenge)
-│       ├── challenge/page.tsx  # Daily challenge (5 questions)
-│       ├── practice/page.tsx   # Topic-based practice
-│       ├── leaderboard/page.tsx
-│       ├── profile/page.tsx
-│       └── settings/page.tsx   # Logout
+│       ├── dashboard/page.tsx  # Main hub
+│       ├── challenge/page.tsx  # Daily challenge (DONE)
+│       ├── practice/page.tsx   # Topic practice (DONE)
+│       ├── learn/page.tsx      # Learning path (NEW)
+│       ├── learn/[topicId]/page.tsx         # Topic lessons
+│       ├── learn/[topicId]/lesson/[id]/page.tsx  # Lesson viewer
+│       ├── learn/[topicId]/quiz/page.tsx    # Weekly quiz
+│       ├── leaderboard/page.tsx (DONE)
+│       ├── profile/page.tsx     (DONE)
+│       └── settings/page.tsx
 ├── lib/
-│   ├── supabase-client.ts      # Browser Supabase client
-│   ├── supabase-server.ts      # Server Supabase client
-│   ├── supabase-middleware.ts   # Middleware auth helper
-│   └── constants.ts            # XP values, streak rules, encouragements
+│   ├── supabase-client.ts
+│   ├── supabase-server.ts
+│   └── constants.ts
 ├── types/
-│   └── database.ts             # TypeScript types for all tables
-└── middleware.ts                # Route protection
+│   └── database.ts
+└── middleware.ts
 ```
 
-## Database (Supabase — already set up with data)
-12 tables with RLS policies enabled:
+## Database Tables
 
-**Reference tables** (public read):
-- `subjects` — 9 subjects (only MATH active for MVP)
-- `topics` — 55 Math topics across Form 1-5 (KSSM syllabus)
-- `questions` — 15 sample MCQ questions (Form 1, bilingual BM/EN)
-- `achievements` — 15 achievement definitions
+### Existing (Sprint 1-5)
+- subjects, topics, questions, achievements, profiles
+- student_subjects, daily_challenges, practice_sessions
+- question_attempts, diagnostic_results, student_achievements, xp_transactions
 
-**User tables** (own data only via RLS):
-- `profiles` — extends auth.users with form_level, school, state, xp, streak
-- `student_subjects` — enrolled subjects
-- `daily_challenges` — daily 5-question challenges
-- `practice_sessions` — topic practice sessions
-- `question_attempts` — every answer recorded
-- `diagnostic_results` — readiness scores
-- `student_achievements` — earned achievements
-- `xp_transactions` — XP history
+### NEW Phase A Tables (already migrated)
+- lessons — structured lesson content with JSON content blocks
+- lesson_progress — student completion tracking per lesson
+- weekly_quizzes — end-of-topic quizzes
+- quiz_attempts — quiz results
+- study_time_log — daily study time
+- parent_profiles, parent_children, weekly_reports, learning_goals
 
-**Database functions**:
-- `handle_new_user()` — trigger: auto-creates profile on signup
-- `update_streak(p_student_id)` — manages daily streak logic
-- `add_xp(p_student_id, p_amount, p_source)` — adds XP and records transaction
-- `get_leaderboard(p_scope, p_state, p_school, p_limit)` — ranked leaderboard
+### Lesson Content Block Types (JSON array in content_en/content_bm)
+- objective: {type, text}
+- concept: {type, title, text}
+- formula: {type, formula, note}
+- worked_example: {type, question, steps[]}
+- quick_check: {type, question, options[], correct (index), explanation}
+- summary: {type, points[]}
+- practice_intro: {type, text}
+- quiz_intro: {type, text}
 
-## Auth Flow
-1. User visits `/login`
-2. Signs in via Google OAuth or Email magic link
-3. Supabase trigger auto-creates profile in `profiles` table
-4. Auth callback at `/auth/callback` checks `onboarding_completed`
-5. If not completed → redirect to `/onboarding`
-6. If completed → redirect to `/dashboard`
-7. Middleware protects all routes except `/`, `/login`, `/auth/*`
+## Current Phase: Phase A — Learning Path
 
-## Environment Variables
-```
-NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-```
+### Build these pages:
+
+1. /learn — Weekly learning schedule by topic, filter by Form, show progress
+2. /learn/[topicId] — Topic detail with sequential lessons list
+3. /learn/[topicId]/lesson/[id] — Lesson viewer rendering content blocks step by step
+4. /learn/[topicId]/quiz — Weekly topic quiz
+5. Update bottom nav: replace Practice with 📖 Belajar -> /learn
+6. Update dashboard: add "Continue Learning" card
+
+### Content Block Styling
+- objective: bg-purple-50 border-purple-200, 🎯 icon
+- concept: bg-white shadow-sm, bold title, preserve newlines
+- formula: bg-amber-50 border-amber-300, 📐 icon, large mono text
+- worked_example: white card, blue question box, numbered steps
+- quick_check: interactive MCQ, green/red feedback, must answer to proceed
+- summary: bg-purple-50 border-purple-200, 📝 icon, bullet points
+
+### XP Awards
+- Complete lesson: +30 XP
+- Complete all topic lessons: +50 bonus
+- Pass weekly quiz: +50 XP
+- Perfect quiz (100%): +100 bonus
+
+### Seeded Data Available
+Form 1 Math lessons exist for:
+- Chapter 1 (Rational Numbers): 5 lessons
+- Chapter 5 (Algebraic Expressions): 5 lessons
+- Chapter 6 (Linear Equations): 5 lessons
 
 ## Design System
-- **Primary**: Purple (#7C3AED)
-- **Success/Correct**: Green (#10B981)
-- **XP/Gold**: Amber (#FBBF24)
-- **Error/Wrong**: Red (#EF4444)
-- **Background**: White (#FFFFFF)
-- **Text**: Dark (#1E1B4B)
-- **Mobile-first**: max-w-md centered, bottom navigation bar
-- **Personality**: Encouraging, Malaysian slang OK ("Mantap!", "Gempak!", "Power la!")
-- **Bilingual**: All content in BM and EN, toggle via preferred_language
-
-## Gamification Rules
-| Action | XP |
-|---|---|
-| Daily challenge complete | +50 |
-| Daily perfect (5/5) | +100 bonus |
-| Practice correct (easy) | +10 |
-| Practice correct (hard) | +20 |
-| 7-day streak | +200 |
-| 30-day streak | +1000 |
-| Achievement unlock | varies |
-
-Streak rules: Complete 1 daily challenge to maintain. Resets at midnight MYT (UTC+8).
-
-## Current Status
-- ✅ Landing page (bright white + purple theme)
-- ✅ Database schema + seed data deployed to Supabase
-- ❌ Login page broken (webpack error with @supabase/ssr)
-- ❌ Auth flow not tested
-- ❌ Onboarding wizard not tested
-- ❌ Dashboard not tested
-- ❌ Challenge engine not built (placeholder)
-- ❌ Practice page not built (placeholder)
-- ❌ Leaderboard not built (placeholder)
-- ❌ Profile page not built (placeholder)
-
-## Immediate Priority
-1. Fix Supabase client setup — resolve @supabase/ssr compatibility with Next.js 15
-2. Get login → auth callback → onboarding → dashboard flow working
-3. Build Daily Challenge engine (Sprint 3)
-
-## Malaysian Context
-- SPM = Malaysian national exam taken in Form 5
-- Students prepare from Form 1 (age 13) to Form 5 (age 17)
-- BM = Bahasa Melayu (national language)
-- KSSM = current national curriculum
-- Malaysian states used for leaderboard segmentation
-- WhatsApp is primary messaging platform
+- Primary: Purple #7C3AED
+- Success: Green #10B981
+- XP/Gold: Amber #FBBF24
+- Error: Red #EF4444
+- Background: White
+- Mobile-first, max-w-md centered, bottom nav bar
+- Bilingual: read preferred_language from profile (bm/en)
+- Encouragement: "Mantap! 💪", "Betul! 🎯", "Gempak! 🔥"

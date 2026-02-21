@@ -7,6 +7,8 @@ export const XP = {
   DIAGNOSTIC_COMPLETE: 100,
   STREAK_7: 200,
   STREAK_30: 1000,
+  LESSON_COMPLETE: 30,
+  TOPIC_ALL_LESSONS: 50,
 } as const
 
 // Daily challenge config

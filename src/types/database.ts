@@ -102,6 +102,40 @@ export interface LeaderboardEntry {
   current_streak: number
 }
 
+// ─── Phase A: Learning Path ──────────────────────────────────────────────────
+
+export interface Lesson {
+  id: string
+  topic_id: string
+  lesson_number: number
+  title_en: string
+  title_bm: string
+  content_en: ContentBlock[]
+  content_bm: ContentBlock[]
+  duration_minutes: number
+  is_active: boolean
+  created_at: string
+}
+
+export interface LessonProgress {
+  id: string
+  student_id: string
+  lesson_id: string
+  completed: boolean
+  completed_at: string | null
+  time_spent_seconds: number | null
+}
+
+export type ContentBlock =
+  | { type: 'objective'; text: string }
+  | { type: 'concept'; title: string; text: string }
+  | { type: 'formula'; formula: string; note?: string }
+  | { type: 'worked_example'; question: string; steps: string[] }
+  | { type: 'quick_check'; question: string; options: string[]; correct: number; explanation: string }
+  | { type: 'summary'; points: string[] }
+  | { type: 'practice_intro'; text: string }
+  | { type: 'quiz_intro'; text: string }
+
 // Malaysian states
 export const MALAYSIAN_STATES = [
   'Johor', 'Kedah', 'Kelantan', 'Melaka', 'Negeri Sembilan',
