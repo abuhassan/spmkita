@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase-client'
 import type { Profile, Topic, Lesson, ContentBlock } from '@/types/database'
 import { XP, ENCOURAGEMENT } from '@/lib/constants'
+import AiTutor from '@/components/AiTutor'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -27,12 +28,14 @@ export default function LessonViewerPage() {
   const [lesson, setLesson] = useState<Lesson | null>(null)
   const [loading, setLoading] = useState(true)
   const [alreadyCompleted, setAlreadyCompleted] = useState(false)
+  
 
   // Step-through state
   const [currentStep, setCurrentStep] = useState(0)
   const [qcAnswers, setQcAnswers] = useState<Record<number, QuickCheckAnswer>>({})
   const [finished, setFinished] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [showAiTutor, setShowAiTutor] = useState(false)
   const [xpEarned, setXpEarned] = useState(0)
   const [topicBonus, setTopicBonus] = useState(false)
 
@@ -64,15 +67,15 @@ export default function LessonViewerPage() {
       setTopic(topicRes.data)
       setLesson(lessonRes.data as Lesson)
 
-      // Check if already completed
-      const { data: progress } = await supabase
-        .from('lesson_progress')
-        .select('completed')
-        .eq('student_id', user.id)
-        .eq('lesson_id', lessonId)
-        .single()
+      // Change .single() to .maybeSingle()
+const { data: progress } = await supabase
+  .from('lesson_progress')
+  .select('status')
+  .eq('student_id', user.id)
+  .eq('lesson_id', lessonId)
+  .maybeSingle()
 
-      if (progress?.completed) {
+      if (progress?.status === 'completed') {
         setAlreadyCompleted(true)
         // Show all blocks immediately for re-reading
         const blocks = profileRes.data.preferred_language === 'en'
@@ -148,24 +151,28 @@ export default function LessonViewerPage() {
 
     try {
       // Upsert lesson progress
-      await supabase
-        .from('lesson_progress')
-        .upsert({
-          student_id: userId.current,
-          lesson_id: lessonId,
-          completed: true,
-          completed_at: new Date().toISOString(),
-          time_spent_seconds: timeSpent,
-        }, { onConflict: 'student_id,lesson_id' })
+const { data: upsertData, error: upsertError } = await supabase
+  .from('lesson_progress')
+  .upsert({
+    student_id: userId.current,
+    lesson_id: lessonId,
+    status: 'completed',
+    completed_at: new Date().toISOString(),
+    time_spent_seconds: timeSpent,
+    progress_percent: 100,
+  }, { onConflict: 'student_id,lesson_id' })
+
+console.log('UPSERT ERROR:', JSON.stringify(upsertError))
 
       // Award lesson XP
       totalXp = XP.LESSON_COMPLETE
-      await supabase.rpc('add_xp', {
+      const { error: xpError } = await supabase.rpc('add_xp', {
         p_student_id: userId.current,
         p_amount: XP.LESSON_COMPLETE,
         p_source: 'lesson_complete',
         p_ref_id: lessonId,
       })
+      console.log('XP ERROR:', JSON.stringify(xpError))
 
       // Check if all lessons in this topic are now complete
       const { data: allLessons } = await supabase
@@ -357,11 +364,19 @@ export default function LessonViewerPage() {
               {lang === 'bm' ? '👆 Jawab soalan di atas untuk teruskan' : '👆 Answer the question above to continue'}
             </p>
           ) : (
+            <div className="flex gap-2">
+            <button
+              onClick={() => setShowAiTutor(true)}
+              className="w-12 h-12 rounded-xl bg-[#6C5CE7]/10 text-lg flex items-center justify-center shrink-0 active:scale-95 transition-all"
+            >
+              🤖
+            </button>
             <button
               onClick={handleNext}
               disabled={saving}
               className="w-full bg-[#6C5CE7] text-white font-semibold py-3.5 rounded-xl shadow-md active:scale-[0.98] transition-all disabled:opacity-60"
             >
+              
               {saving
                 ? (lang === 'bm' ? 'Menyimpan...' : 'Saving...')
                 : isLastBlock
@@ -370,9 +385,26 @@ export default function LessonViewerPage() {
                     : (lang === 'bm' ? 'Selesai Pelajaran ✓' : 'Complete Lesson ✓'))
                 : (lang === 'bm' ? 'Seterusnya →' : 'Next →')}
             </button>
+            </div>
           )}
         </div>
       </div>
+      {/* AI Tutor Drawer */}
+      <AiTutor
+        isOpen={showAiTutor}
+        onClose={() => setShowAiTutor(false)}
+        userId={userId.current}
+        lang={lang}
+        lessonTitle={lang === 'bm' ? lesson?.title_bm : lesson?.title_en}
+        topicName={topic ? `${lang === 'bm' ? 'Bab' : 'Ch'} ${topic.chapter_number}` : ''}
+        currentBlock={
+          currentBlock?.type === 'concept' ? currentBlock.title
+          : currentBlock?.type === 'formula' ? currentBlock.formula
+          : currentBlock?.type === 'worked_example' ? currentBlock.question
+          : currentBlock?.type === 'quick_check' ? currentBlock.question
+          : undefined
+        }
+      />
     </div>
   )
 }
