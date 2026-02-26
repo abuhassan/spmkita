@@ -6,8 +6,8 @@ import { createClient } from '@/lib/supabase-client'
 import { MALAYSIAN_STATES } from '@/types/database'
 import type { Subject } from '@/types/database'
 
-type Role = 'student' | 'parent'
-type Step = 'role' | 'profile' | 'subjects' | 'ready' | 'parent_info' | 'parent_code' | 'parent_done'
+type Role = 'student' | 'parent' | 'tutor'
+type Step = 'role' | 'profile' | 'subjects' | 'ready' | 'parent_info' | 'parent_code' | 'parent_done' | 'tutor_info' | 'tutor_code' | 'tutor_done'
 
 export default function OnboardingPage() {
   const router = useRouter()
@@ -34,6 +34,15 @@ export default function OnboardingPage() {
   const [childName, setChildName] = useState('')
   const [childSchool, setChildSchool] = useState('')
 
+  // Tutor form
+  const [tutorName, setTutorName] = useState('')
+  const [tutorPhone, setTutorPhone] = useState('')
+  const [centreName, setCentreName] = useState('')
+  const [tutorInviteCode, setTutorInviteCode] = useState('')
+  const [tutorCodeError, setTutorCodeError] = useState('')
+  const [tutorChildName, setTutorChildName] = useState('')
+  const [tutorChildSchool, setTutorChildSchool] = useState('')
+
   const lang = language
 
   useEffect(() => {
@@ -54,7 +63,9 @@ export default function OnboardingPage() {
 
   function handleRoleSelect(r: Role) {
     setRole(r)
-    setStep(r === 'student' ? 'profile' : 'parent_info')
+    if (r === 'student') setStep('profile')
+    else if (r === 'parent') setStep('parent_info')
+    else setStep('tutor_info')
   }
 
   async function handleProfileSubmit() {
@@ -109,14 +120,12 @@ export default function OnboardingPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setLoading(false); return }
 
-    // Update profile with parent role and name
     await supabase.from('profiles').update({
       display_name: parentName,
       preferred_language: language,
       role: 'parent',
     }).eq('id', user.id)
 
-    // Create parent_profiles record
     await supabase.from('parent_profiles').upsert({
       user_id: user.id,
       phone: parentPhone || null,
@@ -133,7 +142,6 @@ export default function OnboardingPage() {
 
     const code = inviteCode.trim().toUpperCase()
 
-    // Find student with this invite code
     const { data: child } = await supabase
       .from('profiles')
       .select('id, display_name, school_name')
@@ -152,17 +160,15 @@ export default function OnboardingPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setLoading(false); return }
 
-    // Create parent-child link
     await supabase.from('parent_children').insert({
-  parent_id: user.id,
-  child_id: child.id,
-  status: 'active',
-})
+      parent_id: user.id,
+      child_id: child.id,
+      status: 'active',
+    })
 
     setChildName(child.display_name || '')
     setChildSchool(child.school_name || '')
 
-    // Mark onboarding complete
     await supabase.from('profiles').update({
       onboarding_completed: true,
       last_active_date: new Date().toISOString().split('T')[0],
@@ -172,11 +178,78 @@ export default function OnboardingPage() {
     setLoading(false)
   }
 
+  // ─── Tutor Handlers ───────────────────────────────────────────────────
+
+  async function handleTutorInfoSubmit() {
+    setLoading(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setLoading(false); return }
+
+    await supabase.from('profiles').update({
+      display_name: tutorName,
+      preferred_language: language,
+      role: 'tutor',
+      centre_name: centreName || null,
+    }).eq('id', user.id)
+
+    await supabase.from('parent_profiles').upsert({
+      user_id: user.id,
+      phone: tutorPhone || null,
+      notification_preferences: { weekly_report: true, low_activity: true },
+    }, { onConflict: 'user_id' })
+
+    setStep('tutor_code')
+    setLoading(false)
+  }
+
+  async function handleTutorCodeSubmit() {
+    setLoading(true)
+    setTutorCodeError('')
+
+    const code = tutorInviteCode.trim().toUpperCase()
+
+    const { data: child } = await supabase
+      .from('profiles')
+      .select('id, display_name, school_name')
+      .eq('invite_code', code)
+      .eq('role', 'student')
+      .single()
+
+    if (!child) {
+      setTutorCodeError(lang === 'bm'
+        ? 'Kod tidak sah. Sila semak semula dengan pelajar anda.'
+        : 'Invalid code. Please check with your student.')
+      setLoading(false)
+      return
+    }
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setLoading(false); return }
+
+    await supabase.from('parent_children').insert({
+      parent_id: user.id,
+      child_id: child.id,
+      status: 'active',
+    })
+
+    setTutorChildName(child.display_name || '')
+    setTutorChildSchool(child.school_name || '')
+
+    await supabase.from('profiles').update({
+      onboarding_completed: true,
+      last_active_date: new Date().toISOString().split('T')[0],
+    }).eq('id', user.id)
+
+    setStep('tutor_done')
+    setLoading(false)
+  }
+
   // ─── Progress dots ─────────────────────────────────────────────────────
 
   const studentSteps: Step[] = ['role', 'profile', 'subjects', 'ready']
   const parentSteps: Step[] = ['role', 'parent_info', 'parent_code', 'parent_done']
-  const steps = role === 'parent' ? parentSteps : studentSteps
+  const tutorSteps: Step[] = ['role', 'tutor_info', 'tutor_code', 'tutor_done']
+  const steps = role === 'parent' ? parentSteps : role === 'tutor' ? tutorSteps : studentSteps
 
   const filteredSubjects = subjects.filter(s => s.form_levels.includes(formLevel))
 
@@ -248,6 +321,24 @@ export default function OnboardingPage() {
                   </p>
                 </div>
                 <span className="text-[#6C5CE7] text-xl">→</span>
+              </button>
+
+              <button
+                onClick={() => handleRoleSelect('tutor')}
+                className="w-full flex items-center gap-4 bg-white rounded-2xl p-5 shadow-sm border-2 border-transparent hover:border-[#00B894] transition-all active:scale-[0.98]"
+              >
+                <span className="text-4xl">📖</span>
+                <div className="text-left flex-1">
+                  <p className="text-lg font-bold text-[#2D3436]">
+                    {lang === 'bm' ? 'Tutor' : 'Tutor'}
+                  </p>
+                  <p className="text-sm text-[#636E72]">
+                    {lang === 'bm'
+                      ? 'Saya mahu pantau kemajuan pelajar saya'
+                      : 'I want to monitor my students\' progress'}
+                  </p>
+                </div>
+                <span className="text-[#00B894] text-xl">→</span>
               </button>
             </div>
 
@@ -569,7 +660,6 @@ export default function OnboardingPage() {
               </p>
             </div>
 
-            {/* How to find code hint */}
             <div className="bg-[#6C5CE7]/5 border border-[#6C5CE7]/20 rounded-xl p-3">
               <p className="text-xs text-[#636E72] leading-relaxed">
                 💡 {lang === 'bm'
@@ -623,7 +713,6 @@ export default function OnboardingPage() {
               {lang === 'bm' ? 'Berjaya disambung!' : 'Successfully connected!'}
             </h2>
 
-            {/* Child info card */}
             <div className="bg-white rounded-2xl p-6 shadow-sm">
               <p className="text-sm text-[#636E72] mb-2">
                 {lang === 'bm' ? 'Anak anda:' : 'Your child:'}
@@ -663,6 +752,198 @@ export default function OnboardingPage() {
               className="w-full bg-[#6C5CE7] text-white font-bold text-lg py-4 rounded-2xl hover:bg-[#5A4BD1] transition-colors shadow-lg"
             >
               {lang === 'bm' ? 'Pergi ke Dashboard Ibu Bapa 🚀' : 'Go to Parent Dashboard 🚀'}
+            </button>
+          </div>
+        )}
+
+        {/* ════════════════════════════════════════════════════════════════ */}
+        {/* TUTOR ONBOARDING FLOW                                          */}
+        {/* ════════════════════════════════════════════════════════════════ */}
+
+        {/* ── Tutor Step 1: Name, Phone & Centre ─────────────────────────── */}
+        {step === 'tutor_info' && (
+          <div className="space-y-6">
+            <div className="text-center">
+              <div className="text-4xl mb-2">📖</div>
+              <h2 className="text-2xl font-bold text-[#2D3436]">
+                {lang === 'bm' ? 'Maklumat Tutor' : 'Tutor Information'}
+              </h2>
+              <p className="text-[#636E72] mt-1">
+                {lang === 'bm'
+                  ? 'Maklumat asas untuk akaun tutor anda'
+                  : 'Basic information for your tutor account'}
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[#2D3436] mb-1">
+                  {lang === 'bm' ? 'Nama Paparan *' : 'Display Name *'}
+                </label>
+                <input
+                  type="text"
+                  value={tutorName}
+                  onChange={e => setTutorName(e.target.value)}
+                  placeholder={lang === 'bm' ? 'Contoh: Cikgu Ahmad' : 'e.g. Teacher Ahmad'}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-[#00B894] focus:border-transparent outline-none"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[#2D3436] mb-1">
+                  {lang === 'bm' ? 'No. Telefon (pilihan)' : 'Phone Number (optional)'}
+                </label>
+                <input
+                  type="tel"
+                  value={tutorPhone}
+                  onChange={e => setTutorPhone(e.target.value)}
+                  placeholder="012-345 6789"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-[#00B894] focus:border-transparent outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[#2D3436] mb-1">
+                  {lang === 'bm' ? 'Nama Pusat Tuisyen / Akademi (pilihan)' : 'Tuition Centre / Academy Name (optional)'}
+                </label>
+                <input
+                  type="text"
+                  value={centreName}
+                  onChange={e => setCentreName(e.target.value)}
+                  placeholder={lang === 'bm' ? 'Contoh: Pusat Tuisyen Cemerlang' : 'e.g. Excel Tuition Centre'}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-[#00B894] focus:border-transparent outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setRole(null); setStep('role') }}
+                className="flex-1 bg-white border border-gray-200 text-[#2D3436] font-semibold py-3.5 rounded-xl"
+              >
+                ← {lang === 'bm' ? 'Kembali' : 'Back'}
+              </button>
+              <button
+                onClick={handleTutorInfoSubmit}
+                disabled={!tutorName || loading}
+                className="flex-1 bg-[#00B894] text-white font-semibold py-3.5 rounded-xl hover:bg-[#00A381] transition-colors disabled:opacity-50"
+              >
+                {loading
+                  ? (lang === 'bm' ? 'Menyimpan...' : 'Saving...')
+                  : (lang === 'bm' ? 'Seterusnya →' : 'Next →')}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Tutor Step 2: Enter Student Invite Code ────────────────────── */}
+        {step === 'tutor_code' && (
+          <div className="space-y-6">
+            <div className="text-center">
+              <div className="text-4xl mb-2">🔗</div>
+              <h2 className="text-2xl font-bold text-[#2D3436]">
+                {lang === 'bm' ? 'Sambung dengan Pelajar' : 'Connect with Your Student'}
+              </h2>
+              <p className="text-[#636E72] mt-1">
+                {lang === 'bm'
+                  ? 'Masukkan kod jemputan dari pelajar anda'
+                  : 'Enter the invite code from your student'}
+              </p>
+            </div>
+
+            <div className="bg-[#00B894]/5 border border-[#00B894]/20 rounded-xl p-3">
+              <p className="text-xs text-[#636E72] leading-relaxed">
+                💡 {lang === 'bm'
+                  ? 'Pelajar anda boleh cari kod jemputan di halaman Profil mereka. Anda boleh tambah lebih ramai pelajar kemudian dari Dashboard.'
+                  : 'Your student can find their invite code on their Profile page. You can add more students later from the Dashboard.'}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[#2D3436] mb-1">
+                {lang === 'bm' ? 'Kod Jemputan Pelajar *' : 'Student Invite Code *'}
+              </label>
+              <input
+                type="text"
+                value={tutorInviteCode}
+                onChange={e => { setTutorInviteCode(e.target.value.toUpperCase()); setTutorCodeError('') }}
+                placeholder="ABC12345"
+                className="w-full px-4 py-4 rounded-xl border border-gray-200 bg-white focus:ring-2 focus:ring-[#00B894] focus:border-transparent outline-none text-center text-xl font-mono font-bold tracking-widest uppercase"
+                maxLength={12}
+              />
+              {tutorCodeError && (
+                <p className="text-sm text-[#E17055] mt-2">{tutorCodeError}</p>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setStep('tutor_info')}
+                className="flex-1 bg-white border border-gray-200 text-[#2D3436] font-semibold py-3.5 rounded-xl"
+              >
+                ← {lang === 'bm' ? 'Kembali' : 'Back'}
+              </button>
+              <button
+                onClick={handleTutorCodeSubmit}
+                disabled={!tutorInviteCode.trim() || loading}
+                className="flex-1 bg-[#00B894] text-white font-semibold py-3.5 rounded-xl hover:bg-[#00A381] transition-colors disabled:opacity-50"
+              >
+                {loading
+                  ? (lang === 'bm' ? 'Menyemak...' : 'Checking...')
+                  : (lang === 'bm' ? 'Sahkan →' : 'Verify →')}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Tutor Step 3: Confirmation ─────────────────────────────────── */}
+        {step === 'tutor_done' && (
+          <div className="text-center space-y-6">
+            <div className="text-6xl mb-4">✅</div>
+            <h2 className="text-3xl font-bold text-[#2D3436]">
+              {lang === 'bm' ? 'Berjaya disambung!' : 'Successfully connected!'}
+            </h2>
+
+            <div className="bg-white rounded-2xl p-6 shadow-sm">
+              <p className="text-sm text-[#636E72] mb-2">
+                {lang === 'bm' ? 'Pelajar anda:' : 'Your student:'}
+              </p>
+              <p className="text-xl font-bold text-[#2D3436]">{tutorChildName}</p>
+              {tutorChildSchool && (
+                <p className="text-sm text-[#636E72] mt-1">{tutorChildSchool}</p>
+              )}
+            </div>
+
+            <div className="bg-white rounded-2xl p-5 shadow-sm space-y-3 text-left">
+              <p className="font-semibold text-[#2D3436] text-center">
+                {lang === 'bm' ? 'Anda kini boleh:' : 'You can now:'}
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">📊</span>
+                  <span className="text-sm">{lang === 'bm' ? 'Lihat statistik pembelajaran pelajar' : 'View your student\'s learning stats'}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">📅</span>
+                  <span className="text-sm">{lang === 'bm' ? 'Pantau aktiviti mingguan' : 'Monitor weekly activity'}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">🎯</span>
+                  <span className="text-sm">{lang === 'bm' ? 'Tetapkan sasaran pembelajaran' : 'Set learning goals'}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">👥</span>
+                  <span className="text-sm">{lang === 'bm' ? 'Tambah lebih ramai pelajar dari Dashboard' : 'Add more students from the Dashboard'}</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => router.push('/parent')}
+              className="w-full bg-[#00B894] text-white font-bold text-lg py-4 rounded-2xl hover:bg-[#00A381] transition-colors shadow-lg"
+            >
+              {lang === 'bm' ? 'Pergi ke Dashboard Tutor 🚀' : 'Go to Tutor Dashboard 🚀'}
             </button>
           </div>
         )}
