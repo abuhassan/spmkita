@@ -15,6 +15,7 @@ const studentNav = [
 
 const parentNav = [
   { href: '/parent', label_bm: 'Utama', label_en: 'Home', icon: '🏠' },
+  { href: '/parent/reports', label_bm: 'Laporan', label_en: 'Reports', icon: '📊' },
   { href: '/parent/add-child', label_bm: 'Tambah', label_en: 'Add Child', icon: '➕' },
   { href: '/profile', label_bm: 'Profil', label_en: 'Profile', icon: '👤' },
 ]
@@ -29,7 +30,7 @@ export default function ProtectedLayout({
   const supabase = createClient()
 
   const [lang, setLang] = useState<'bm' | 'en' | null>(null)
-  const [role, setRole] = useState<'student' | 'parent' | null>(null)
+  const [role, setRole] = useState<'student' | 'parent' | 'tutor' | null>(null)
   const [toggling, setToggling] = useState(false)
 
   // Load current language and role from profile
@@ -44,7 +45,7 @@ export default function ProtectedLayout({
         .single()
       if (data) {
         setLang(data.preferred_language as 'bm' | 'en')
-        setRole((data.role as 'student' | 'parent') || 'student')
+        setRole((data.role as 'student' | 'parent' | 'tutor') || 'student')
       }
     }
     loadProfile()
@@ -53,7 +54,7 @@ export default function ProtectedLayout({
 
   // Redirect parents from student-only routes to /parent
   useEffect(() => {
-    if (role === 'parent' && pathname === '/dashboard') {
+    if ((role === 'parent' || role === 'tutor') && pathname === '/dashboard') {
       router.replace('/parent')
     }
   }, [role, pathname, router])
@@ -77,7 +78,7 @@ export default function ProtectedLayout({
     window.location.reload()
   }
 
-  const navItems = role === 'parent' ? parentNav : studentNav
+  const navItems = (role === 'parent' || role === 'tutor') ? parentNav : studentNav
 
   return (
     <div className="min-h-screen bg-[#F8F9FE] pb-20">
@@ -101,17 +102,19 @@ export default function ProtectedLayout({
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-lg z-50">
         <div className="max-w-md mx-auto flex justify-around">
           {navItems.map(item => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+            const isActive = item.href === '/parent'
+              ? pathname === '/parent'
+              : pathname === item.href || pathname.startsWith(item.href + '/')
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center py-2 px-4 transition-colors ${
+                className={`flex flex-col items-center py-2 px-3 transition-colors ${
                   isActive ? 'text-[#6C5CE7]' : 'text-[#636E72]'
                 }`}
               >
                 <span className="text-xl">{item.icon}</span>
-                <span className="text-xs font-medium mt-0.5">{lang === 'en' ? item.label_en : item.label_bm}</span>
+                <span className="text-[10px] font-medium mt-0.5">{lang === 'en' ? item.label_en : item.label_bm}</span>
                 {isActive && (
                   <div className="w-1 h-1 bg-[#6C5CE7] rounded-full mt-0.5" />
                 )}
