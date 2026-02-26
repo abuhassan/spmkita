@@ -123,6 +123,7 @@ export default function ParentDashboardPage() {
   const userId = useRef<string>('')
 
   const lang = profile?.preferred_language || 'bm'
+  const basePath = profile?.role === 'tutor' ? '/tutor' : '/parent'
 
   // ─── Toast helper ──────────────────────────────────────────────────────
 
@@ -508,7 +509,7 @@ export default function ParentDashboardPage() {
               : 'You haven\'t connected with any children yet.'}
           </p>
           <button
-            onClick={() => router.push('/parent/add-child')}
+            onClick={() => router.push(`${basePath}/add-child`)}
             className="w-full bg-[#6C5CE7] text-white font-semibold py-3.5 rounded-xl shadow-md"
           >
             ➕ {lang === 'bm' ? 'Tambah Anak' : 'Add Child'}
@@ -572,7 +573,7 @@ export default function ParentDashboardPage() {
             </p>
           </div>
           <button
-            onClick={() => router.push('/parent/add-child')}
+            onClick={() => router.push(`${basePath}/add-child`)}
             className="text-[#6C5CE7] text-sm font-semibold"
           >
             ➕
@@ -792,7 +793,7 @@ export default function ParentDashboardPage() {
 
           {/* Add another child */}
           <button
-            onClick={() => router.push('/parent/add-child')}
+            onClick={() => router.push(`${basePath}/add-child`)}
             className="w-full bg-[#6C5CE7]/10 text-[#6C5CE7] font-semibold py-3 rounded-xl mb-4 active:scale-[0.98] transition-all"
           >
             ➕ {profile?.role === 'tutor' ? (lang === 'bm' ? 'Tambah Pelajar Lain' : 'Add Another Student') : (lang === 'bm' ? 'Tambah Anak Lain' : 'Add Another Child')}

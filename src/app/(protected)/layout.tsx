@@ -20,6 +20,13 @@ const parentNav = [
   { href: '/profile', label_bm: 'Profil', label_en: 'Profile', icon: '👤' },
 ]
 
+const tutorNav = [
+  { href: '/tutor', label_bm: 'Utama', label_en: 'Home', icon: '🏠' },
+  { href: '/tutor/reports', label_bm: 'Laporan', label_en: 'Reports', icon: '📊' },
+  { href: '/tutor/add-child', label_bm: 'Tambah', label_en: 'Add Student', icon: '➕' },
+  { href: '/profile', label_bm: 'Profil', label_en: 'Profile', icon: '👤' },
+]
+
 export default function ProtectedLayout({
   children,
 }: {
@@ -54,8 +61,11 @@ export default function ProtectedLayout({
 
   // Redirect parents from student-only routes to /parent
   useEffect(() => {
-    if ((role === 'parent' || role === 'tutor') && pathname === '/dashboard') {
+    if (role === 'parent' && pathname === '/dashboard') {
       router.replace('/parent')
+    }
+    if (role === 'tutor' && pathname === '/dashboard') {
+      router.replace('/tutor')
     }
   }, [role, pathname, router])
 
@@ -78,8 +88,7 @@ export default function ProtectedLayout({
     window.location.reload()
   }
 
-  const navItems = (role === 'parent' || role === 'tutor') ? parentNav : studentNav
-
+  const navItems = role === 'tutor' ? tutorNav : role === 'parent' ? parentNav : studentNav
   return (
     <div className="min-h-screen bg-[#F8F9FE] pb-20">
       {/* Language Toggle — fixed top-right */}
