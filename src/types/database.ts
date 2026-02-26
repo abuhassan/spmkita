@@ -13,7 +13,7 @@ export interface Profile {
   last_active_date: string | null
   onboarding_completed: boolean
   premium: boolean
-  role: 'student' | 'parent'
+  role?: 'student' | 'parent' | 'tutor'
   invite_code: string | null
   created_at: string
   updated_at: string

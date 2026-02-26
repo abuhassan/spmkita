@@ -149,7 +149,7 @@ export default function ParentDashboardPage() {
         .single()
 
       if (!profileData) { router.push('/login'); return }
-      if (profileData.role !== 'parent') { router.push('/dashboard'); return }
+      if (profileData.role !== 'parent' && profileData.role !== 'tutor') { router.push('/dashboard'); return }
       setProfile(profileData)
 
       const { data: links } = await supabase
@@ -500,7 +500,7 @@ export default function ParentDashboardPage() {
         <div className="text-center space-y-6">
           <div className="text-6xl">👨‍👩‍👧</div>
           <h1 className="text-2xl font-bold text-[#2D3436]">
-            {lang === 'bm' ? 'Dashboard Ibu Bapa' : 'Parent Dashboard'}
+            {profile?.role === 'tutor' ? '📖' : '👨‍👩‍👧'} {profile?.role === 'tutor' ? (lang === 'bm' ? 'Dashboard Tutor' : 'Tutor Dashboard') : (lang === 'bm' ? 'Dashboard Ibu Bapa' : 'Parent Dashboard')}
           </h1>
           <p className="text-[#636E72]">
             {lang === 'bm'
@@ -544,7 +544,7 @@ export default function ParentDashboardPage() {
       {/* Header */}
       <div className="mb-4">
         <h1 className="text-xl font-bold text-[#2D3436]">
-          👨‍👩‍👧 {lang === 'bm' ? 'Dashboard Ibu Bapa' : 'Parent Dashboard'}
+          {profile?.role === 'tutor' ? '📖' : '👨‍👩‍👧'} {profile?.role === 'tutor' ? (lang === 'bm' ? 'Dashboard Tutor' : 'Tutor Dashboard') : (lang === 'bm' ? 'Dashboard Ibu Bapa' : 'Parent Dashboard')}
         </h1>
       </div>
 
@@ -795,7 +795,7 @@ export default function ParentDashboardPage() {
             onClick={() => router.push('/parent/add-child')}
             className="w-full bg-[#6C5CE7]/10 text-[#6C5CE7] font-semibold py-3 rounded-xl mb-4 active:scale-[0.98] transition-all"
           >
-            ➕ {lang === 'bm' ? 'Tambah Anak Lain' : 'Add Another Child'}
+            ➕ {profile?.role === 'tutor' ? (lang === 'bm' ? 'Tambah Pelajar Lain' : 'Add Another Student') : (lang === 'bm' ? 'Tambah Anak Lain' : 'Add Another Child')}
           </button>
         </>
       )}
