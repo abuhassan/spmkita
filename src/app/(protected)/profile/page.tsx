@@ -74,7 +74,7 @@ export default function ProfilePage() {
           .eq('student_id', user.id),
         supabase
           .from('daily_challenges')
-          .select('id')
+          .select('id, questions, score')
           .eq('student_id', user.id)
           .not('completed_at', 'is', null),
         supabase.rpc('get_leaderboard', {
@@ -97,11 +97,23 @@ export default function ProfilePage() {
 
       // ── Activity stats ────────────────────────────────────────────────
       const attempts = attemptsRes.data || []
-      const totalAttempts = attempts.length
-      const correctAttempts = attempts.filter(
+      const practiceTotal = attempts.length
+      const practiceCorrect = attempts.filter(
         (a: { is_correct: boolean }) => a.is_correct
       ).length
-      const challengesCompleted = (challengesRes.data || []).length
+
+      // Count questions from completed daily challenges
+      const completedChallenges = challengesRes.data || []
+      const challengesCompleted = completedChallenges.length
+      let challengeQuestionTotal = 0
+      let challengeQuestionCorrect = 0
+      completedChallenges.forEach((c: { questions: string[]; score: number }) => {
+        challengeQuestionTotal += (c.questions?.length || 0)
+        challengeQuestionCorrect += (c.score || 0)
+      })
+
+      const totalAttempts = practiceTotal + challengeQuestionTotal
+      const correctAttempts = practiceCorrect + challengeQuestionCorrect
 
       // Collect unique correctly-answered question IDs
       const correctQuestionIds = new Set<string>()

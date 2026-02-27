@@ -312,8 +312,9 @@ function PracticeContent() {
     const attempts = questions.map(q => ({
       student_id: userId.current,
       question_id: q.id,
-      practice_session_id: session?.id || null,
-      selected_answer: answers[q.id]?.answer || '',
+      session_type: 'practice',
+      session_id: session?.id || null,
+      answer_given: answers[q.id]?.answer || '',
       is_correct: answers[q.id]?.correct || false,
       time_seconds: answers[q.id]?.time_seconds || 0,
     }))
