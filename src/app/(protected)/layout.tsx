@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase-client'
 const studentNav = [
   { href: '/dashboard', label_bm: 'Utama', label_en: 'Home', icon: '🏠' },
   { href: '/challenge', label_bm: 'Cabaran', label_en: 'Challenge', icon: '⚡' },
+  { href: '/practice', label_bm: 'Latihan', label_en: 'Practice', icon: '📝' },
   { href: '/learn', label_bm: 'Belajar', label_en: 'Learn', icon: '📖' },
   { href: '/leaderboard', label_bm: 'Ranking', label_en: 'Ranking', icon: '🏆' },
   { href: '/profile', label_bm: 'Profil', label_en: 'Profile', icon: '👤' },
